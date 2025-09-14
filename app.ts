@@ -12,6 +12,8 @@ import { errorHandler } from './middleware/error-handler';
 import { BAD_REQUEST_ERROR } from './utils/error';
 
 import routers from './routers'
+import http from 'http'
+import { initSocket } from './socket';
 const writeLog = {
     write: (message: string) => {
         logger.info(message)
@@ -73,6 +75,12 @@ app.get('/', (req, res) => {
 // Error handler middleware
 app.use(errorHandler);
 
-app.listen(port, () => {
+// Create HTTP server to attach Socket.IO
+const server = http.createServer(app);
+
+// Initialize Socket.IO and background matcher
+initSocket(server);
+
+server.listen(port, () => {
     logger.info(`Express is listening at http://localhost:${port}`);
 });
