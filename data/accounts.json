@@ -1,0 +1,82 @@
+[
+  {
+    "_id": "jd3nunqe7szuwvlr6sif2qhf",
+    "username": "funny_mountain_862",
+    "email": "funny_mountain_862@example.com",
+    "password": "password123",
+    "createdAt": "2025-09-22T16:35:17.240Z",
+    "updatedAt": "2025-09-22T16:35:17.241Z"
+  },
+  {
+    "_id": "ok4h53u64pzumas98g5vez8s",
+    "username": "clever_ocean_438",
+    "email": "clever_ocean_438@outlook.com",
+    "password": "password123",
+    "createdAt": "2025-09-22T16:35:17.241Z",
+    "updatedAt": "2025-09-22T16:35:17.241Z"
+  },
+  {
+    "_id": "4oo8gv2dx3pa93ian0kvkx76",
+    "username": "kind_sun_432",
+    "email": "kind_sun_432@yahoo.com",
+    "password": "password123",
+    "createdAt": "2025-09-22T16:35:17.241Z",
+    "updatedAt": "2025-09-22T16:35:17.241Z"
+  },
+  {
+    "_id": "1jg2ol5r3i0gnaop6nlrkge9",
+    "username": "happy_flower_20",
+    "email": "happy_flower_20@gmail.com",
+    "password": "password123",
+    "createdAt": "2025-09-22T16:35:17.241Z",
+    "updatedAt": "2025-09-22T16:35:17.241Z"
+  },
+  {
+    "_id": "5z3eu3orj4yasmttfb0dhas6",
+    "username": "awesome_tree_519",
+    "email": "awesome_tree_519@yahoo.com",
+    "password": "password123",
+    "createdAt": "2025-09-22T16:35:17.241Z",
+    "updatedAt": "2025-09-22T16:35:17.241Z"
+  },
+  {
+    "_id": "32nsvorflf7rnz6oz5bqfn4e",
+    "username": "cool_sun_75",
+    "email": "cool_sun_75@hotmail.com",
+    "password": "password123",
+    "createdAt": "2025-09-22T16:35:17.241Z",
+    "updatedAt": "2025-09-22T16:35:17.241Z"
+  },
+  {
+    "_id": "lfj6dmpoc52ielph02ohz3gi",
+    "username": "cool_cat_285",
+    "email": "cool_cat_285@yahoo.com",
+    "password": "password123",
+    "createdAt": "2025-09-22T16:35:17.242Z",
+    "updatedAt": "2025-09-22T16:35:17.242Z"
+  },
+  {
+    "_id": "o9u87qn6r0lt8qtem3ece11a",
+    "username": "cute_tree_373",
+    "email": "cute_tree_373@outlook.com",
+    "password": "password123",
+    "createdAt": "2025-09-22T16:35:17.242Z",
+    "updatedAt": "2025-09-22T16:35:17.242Z"
+  },
+  {
+    "_id": "uakh93qbr6ryyc8bozp7yk7v",
+    "username": "clever_dog_899",
+    "email": "clever_dog_899@example.com",
+    "password": "password123",
+    "createdAt": "2025-09-22T16:35:17.242Z",
+    "updatedAt": "2025-09-22T16:35:17.242Z"
+  },
+  {
+    "_id": "w7mv59mty1t9y6jes67ph75j",
+    "username": "happy_tree_891",
+    "email": "happy_tree_891@gmail.com",
+    "password": "password123",
+    "createdAt": "2025-09-22T16:35:17.242Z",
+    "updatedAt": "2025-09-22T16:35:17.242Z"
+  }
+]

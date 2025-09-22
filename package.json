@@ -7,7 +7,9 @@
         "start:prod": "tsx -r dotenv/config app.ts dotenv_config_path=.env.prod",
         "lint": "eslint . --ext .ts --ignore-pattern dist",
         "build": "tsc && node -r dotenv/config dist/app.js dotenv_config_path=.env",
-        "test": "echo \"Error: no test specified\" && exit 1"
+        "test": "echo \"Error: no test specified\" && exit 1",
+        "generate-data": "tsx -r dotenv/config scripts/generate-fake-data.ts dotenv_config_path=.env",
+        "generate-json": "tsx scripts/generate-json-data.ts"
     },
     "keywords": [],
     "author": "",
@@ -23,6 +25,7 @@
         "http-status": "^2.1.0",
         "ioredis": "^5.7.0",
         "jsonwebtoken": "^9.0.2",
+        "mongoose": "^8.18.1",
         "morgan": "^1.10.1",
         "socket.io": "^4.8.1",
         "typescript": "^5.9.2",
@@ -36,6 +39,7 @@
         "@types/express": "^4.17.1",
         "@types/http-status": "^1.1.2",
         "@types/ioredis": "^5.0.0",
+        "@types/mongoose": "^5.11.97",
         "@types/morgan": "^1.9.10",
         "@types/node": "^24.3.1",
         "@types/socket.io": "^3.0.2",

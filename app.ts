@@ -10,6 +10,7 @@ import settings from './config/env'
 import compression from 'compression';
 import { errorHandler } from './middleware/error-handler';
 import { BAD_REQUEST_ERROR } from './utils/error';
+import connectMongoDB from './config/mongodb';
 
 import routers from './routers'
 import http from 'http'
@@ -80,6 +81,9 @@ const server = http.createServer(app);
 
 // Initialize Socket.IO and background matcher
 initSocket(server);
+
+// Connect to MongoDB
+connectMongoDB();
 
 server.listen(port, () => {
     logger.info(`Express is listening at http://localhost:${port}`);
