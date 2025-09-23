@@ -34,9 +34,9 @@ export interface IUserInfo extends Document {
     photos?: string[];
     location?: {
         type: 'Point';
-        coordinates: [number, number];
+        coordinates: [number, number]; // [longitude, latitude]
     };
-    location_string?: string; // For easier querying
+    location_string?: string; // For easier querying like "Dao Nguyen, An Khanh, Ha Noi"
     createdAt: Date;
     updatedAt: Date;
 }

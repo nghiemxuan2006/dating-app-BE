@@ -408,8 +408,7 @@ async function generateFakeData(numUsers: number = 50) {
 async function main() {
     try {
         await connectMongoDB();
-
-        const numUsers = process.argv[2] ? parseInt(process.argv[2]) : 50;
+        const numUsers = process.argv[3] ? parseInt(process.argv[3]) : 50;
 
         if (isNaN(numUsers) || numUsers <= 0) {
             logger.error('Please provide a valid number of users to generate');

@@ -9,7 +9,8 @@
         "build": "tsc && node -r dotenv/config dist/app.js dotenv_config_path=.env",
         "test": "echo \"Error: no test specified\" && exit 1",
         "generate-data": "tsx -r dotenv/config scripts/generate-fake-data.ts dotenv_config_path=.env",
-        "generate-json": "tsx scripts/generate-json-data.ts"
+        "generate-json": "tsx scripts/generate-json-data.ts",
+        "matching-worker": "tsx -r dotenv/config scripts/matching-worker.ts dotenv_config_path=.env"
     },
     "keywords": [],
     "author": "",

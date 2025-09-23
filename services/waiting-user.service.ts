@@ -1,10 +1,11 @@
 import redis from '../config/redis';
+import { IUserInfo } from '../models/user';
 
 const WAITING_USERS_KEY = 'waiting_users';
 
 export interface WaitingUser {
     userId: string;
-    profile: Record<string, any>;
+    profile: IUserInfo;
 }
 
 export async function addWaitingUser(user: WaitingUser) {
