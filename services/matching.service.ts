@@ -1,20 +1,8 @@
-import Redis from 'ioredis';
-import redis from '../config/redis';
 import { addWaitingUser, getWaitingUsers, WaitingUser } from './waiting-user.service';
 import { IUserInfo } from '../models/user';
 import logger from '../utils/wiston-log';
 import { COORDINATE_INDEX } from '../utils/constants';
-
-// Create separate Redis instances for pub/sub
-const publisher = new Redis({
-    host: process.env.REDIS_HOST || 'localhost',
-    port: Number(process.env.REDIS_PORT) || 6379,
-});
-
-const subscriber = new Redis({
-    host: process.env.REDIS_HOST || 'localhost',
-    port: Number(process.env.REDIS_PORT) || 6379,
-});
+import { publisher, redis, subscriber } from '../config/redis';
 
 const MATCHING_CHANNEL = 'user_matching';
 const MATCH_FOUND_CHANNEL = 'match_found';
@@ -170,8 +158,8 @@ async function processMatchingRequest(matchingRequest: MatchingRequest): Promise
             };
 
             // Store recent matches for both users (expire in 24 hours)
-            await redis.setex(`recent_matches:${matchingRequest.userId}`, 86400, JSON.stringify(matchResult));
-            await redis.setex(`recent_matches:${bestMatch.userId}`, 86400, JSON.stringify(matchResult));
+            // await redis.setex(`recent_matches:${matchingRequest.userId}`, 86400, JSON.stringify(matchResult));
+            // await redis.setex(`recent_matches:${bestMatch.userId}`, 86400, JSON.stringify(matchResult));
 
             // Publish match result
             await publisher.publish(MATCH_FOUND_CHANNEL, JSON.stringify(matchResult));
@@ -240,12 +228,7 @@ export function startMatchingSubscriber(): void {
 
 // Subscribe to match results (for notifications, logging, etc.)
 export function startMatchResultSubscriber(callback: (matchResult: MatchResult) => void): void {
-    const matchResultSubscriber = new Redis({
-        host: process.env.REDIS_HOST || 'localhost',
-        port: Number(process.env.REDIS_PORT) || 6379,
-    });
-
-    matchResultSubscriber.subscribe(MATCH_FOUND_CHANNEL, (err, count) => {
+    subscriber.subscribe(MATCH_FOUND_CHANNEL, (err, count) => {
         if (err) {
             logger.error('Error subscribing to match result channel:', err);
             return;
@@ -253,7 +236,7 @@ export function startMatchResultSubscriber(callback: (matchResult: MatchResult) 
         logger.info(`Subscribed to match result channel. Listening for match notifications...`);
     });
 
-    matchResultSubscriber.on('message', async (channel, message) => {
+    subscriber.on('message', async (channel, message) => {
         if (channel === MATCH_FOUND_CHANNEL) {
             try {
                 const matchResult: MatchResult = JSON.parse(message);

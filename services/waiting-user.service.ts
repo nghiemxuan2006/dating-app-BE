@@ -1,4 +1,4 @@
-import redis from '../config/redis';
+import { redis } from '../config/redis';
 import { IUserInfo } from '../models/user';
 
 const WAITING_USERS_KEY = 'waiting_users';
@@ -22,4 +22,3 @@ export async function popWaitingUser(): Promise<WaitingUser | null> {
     return user ? JSON.parse(user) : null;
 }
 
-export default redis;
