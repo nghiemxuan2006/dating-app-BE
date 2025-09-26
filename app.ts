@@ -26,20 +26,34 @@ const port = settings.PORT;
 const swaggerDefinition = {
     openapi: '3.0.0',
     info: {
-        title: 'Express API Documentation',
+        title: 'Dating App API Documentation',
         version: '1.0.0',
-        description: 'API documentation for your Express backend',
+        description: 'API documentation for Dating App backend with authentication',
     },
     servers: [
         {
             url: `http://localhost:${port}`,
         },
     ],
+    components: {
+        securitySchemes: {
+            bearerAuth: {
+                type: 'http',
+                scheme: 'bearer',
+                bearerFormat: 'JWT',
+            },
+        },
+    },
+    security: [
+        {
+            bearerAuth: [],
+        },
+    ],
 };
 
 const options = {
     swaggerDefinition,
-    apis: ['./routes/*.ts'], // Adjust path to your route files
+    apis: ['./routers/*.ts'], // Adjust path to your route files
 };
 
 const swaggerSpec = swaggerJSDoc(options);

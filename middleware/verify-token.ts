@@ -1,27 +1,34 @@
-import jwt from "jsonwebtoken"
-import { extractToken } from "../utils/token"
-export default async (req: any, res: any, next: any) => {
-    const accessToken = extractToken(req.header('Token'))
-    if (!accessToken) {
-        res.status(400).json({
-            message: "Bad Request:  No token provided"
-        })
-    }
-    if (accessToken) {
-        try {
-            const data = jwt.verify(accessToken, process.env.JWT_SECRET_KEY)
-            req.data = data
-            next()
-        } catch (err) {
-            if (err && err.name == "TokenExpiredError") {
-                res.status(401).json({
-                    message: "Unauthorized: Token expired"
-                })
-            } else {
-                res.status(500).json({ err })
-            }
-        }
-    }
+import { Request, Response, NextFunction } from 'express';
+import { extractToken } from '../utils/token';
+import authService from '../services/auth.service';
+import { UNAUTHORIZED_ERROR } from '../utils/error';
+
+export interface AuthRequest extends Request {
+    user?: {
+        id: string;
+        username: string;
+        email: string;
+    };
 }
+
+export const verifyToken = async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+        const accessToken = extractToken(req.header('Authorization')) || extractToken(req.header('Token'));
+
+        if (!accessToken) {
+            throw new UNAUTHORIZED_ERROR('No token provided');
+        }
+
+        // Verify token using auth service
+        const decoded = authService.verifyAccessToken(accessToken);
+        req.user = decoded;
+
+        next();
+    } catch (error) {
+        next(error);
+    }
+};
+
+export default verifyToken;
 
 
