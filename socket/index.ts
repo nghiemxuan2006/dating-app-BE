@@ -15,6 +15,15 @@ export function initSocket(server: HTTPServer) {
         cors: { origin: '*', methods: ['GET', 'POST'] },
     });
 
+    // Middleware for socket authentication
+    io.use((socket, next) => {
+        const userId = socket.handshake.auth.userId;
+        console.log("🚀 ~ initSocket ~ userId:", userId)
+
+        mappingUserSocket.set(userId, socket.id);
+        next();
+    });
+
     io.on('connection', (socket) => {
         // Client should send its userId after connect to map socket <-> user
         socket.on('register', (userId: string) => {
@@ -77,10 +86,15 @@ export function initSocket(server: HTTPServer) {
         const socket1 = socketId1 ? io.sockets.sockets.get(socketId1) : null;
         const socket2 = socketId2 ? io.sockets.sockets.get(socketId2) : null;
         if (socket1 && socket2) {
-            const room = `match:${matchResult.user1}:${matchResult.user2}}`;
-            socket1.join(room);
-            socket2.join(room);
-            io.to(room).emit('match_found', room);
+            const room = `match:${matchResult.user1}:${matchResult.user2}`;
+            await new Promise(resolve => setTimeout(resolve, 5000));
+            Promise.all([
+                io.to(socketId1).emit('match_found', matchResult.user2),
+                io.to(socketId2).emit('match_found', matchResult.user1)
+            ]);
+            // socket1.join(room);
+            // socket2.join(room);
+            // io.to(room).emit('match_found', room);
             logger.info(`Emitted match_found to room ${room}`);
         } else {
             logger.info(`One or both users are not connected. user1 socket: ${socketId1}, user2 socket: ${socketId2}`);
