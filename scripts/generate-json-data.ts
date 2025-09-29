@@ -59,6 +59,29 @@ const generatePhotos = (): string[] => {
     return photos;
 };
 
+const generateAvatarUrl = (): string => {
+    // Generate a random avatar URL using different avatar services
+    const avatarServices = [
+        () => `https://picsum.photos/200/200?random=${Math.floor(Math.random() * 10000)}`,
+        () => `https://i.pravatar.cc/200?img=${Math.floor(Math.random() * 70) + 1}`,
+        () => {
+            const seed = generateRandomString(8);
+            return `https://api.dicebear.com/7.x/avataaars/svg?seed=${seed}`;
+        },
+        () => {
+            const seed = generateRandomString(8);
+            return `https://api.dicebear.com/7.x/personas/svg?seed=${seed}`;
+        },
+        () => {
+            const seed = generateRandomString(8);
+            return `https://api.dicebear.com/7.x/initials/svg?seed=${seed}`;
+        }
+    ];
+
+    const service = avatarServices[Math.floor(Math.random() * avatarServices.length)];
+    return service();
+};
+
 const generateLocation = (): {
     location: { type: 'Point'; coordinates: [number, number] };
     location_string: string;
@@ -356,6 +379,7 @@ function generateJSONData(numUsers: number = 50) {
             birthdate: birthdate.toISOString(),
             interests: generateInterests(),
             photos: generatePhotos(),
+            avatarUrl: generateAvatarUrl(),
             age_range: generateAgeRange(birthdate),
             location: locationData.location,
             location_string: locationData.location_string,

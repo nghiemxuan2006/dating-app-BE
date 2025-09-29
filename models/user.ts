@@ -32,6 +32,7 @@ export interface IUserInfo extends Document {
     birthdate: Date;
     interests?: string[];
     photos?: string[];
+    avatarUrl?: string;
     location?: {
         type: 'Point';
         coordinates: [number, number]; // [longitude, latitude]
@@ -49,6 +50,7 @@ const UserInfoSchema: Schema = new Schema<IUserInfo>(
         birthdate: { type: Date, required: true },
         interests: [{ type: String }],
         photos: [{ type: String }],
+        avatarUrl: { type: String },
         age_range: {
             min: { type: Number },
             max: { type: Number }
