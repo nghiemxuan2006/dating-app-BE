@@ -3,6 +3,7 @@ import { IUserInfo } from '../models/user';
 import logger from '../utils/wiston-log';
 import { COORDINATE_INDEX } from '../utils/constants';
 import { publisher, redis, subscriber } from '../config/redis';
+import { Match } from '../models/match'; // Ensure you have a Match model
 
 const MATCHING_CHANNEL = 'user_matching';
 const MATCH_FOUND_CHANNEL = 'match_found';
@@ -136,7 +137,7 @@ async function processMatchingRequest(matchingRequest: MatchingRequest): Promise
             const score = calculateCompatibility(matchingRequest, waitingUser);
             logger.info(`Compatibility score between ${matchingRequest.userId} and ${waitingUser.userId}: ${score}`);
 
-            if (score > bestScore && score >= minimumScore) {
+            if (score > bestScore && score >= minimumScore || true) {
                 bestScore = score;
                 bestMatch = waitingUser;
             }
@@ -163,6 +164,24 @@ async function processMatchingRequest(matchingRequest: MatchingRequest): Promise
 
             // Publish match result
             await publisher.publish(MATCH_FOUND_CHANNEL, JSON.stringify(matchResult));
+            // Save match result to Match table
+            await Match.create({
+                user1: matchResult.user1,
+                user2: matchResult.user2,
+                user1like: false,
+                user2like: false,
+            });
+
+            await Match.findOneAndUpdate(
+                {
+                    $or: [
+                        { userid1: matchResult.user1, userid2: matchResult.user2 },
+                        { userid1: matchResult.user2, userid2: matchResult.user1 }
+                    ]
+                },
+                { $set: { user1like: false, user2like: false } },
+                { upsert: true }
+            );
 
         } else {
             // No match found, add to waiting list

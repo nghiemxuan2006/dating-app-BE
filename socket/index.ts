@@ -4,6 +4,7 @@ import { MatchingRequest, MatchResult, publishMatchingRequest, startMatchResultS
 import logger from '../utils/matching-worker-log';
 import { BAD_REQUEST_ERROR } from '../utils/error';
 import { UserInfo } from '../models/user';
+import { Match } from '../models/match';
 
 let io: Server | null = null;
 const mappingUserSocket = new Map<string, string>(); // userId -> socketId
@@ -21,6 +22,7 @@ export function initSocket(server: HTTPServer) {
         console.log("🚀 ~ initSocket ~ userId:", userId)
 
         mappingUserSocket.set(userId, socket.id);
+        socket.data.userId = userId;
         next();
     });
 
@@ -62,6 +64,28 @@ export function initSocket(server: HTTPServer) {
 
             // Publish matching request to Redis
             await publishMatchingRequest(matchingRequest);
+        })
+        socket.on('approve', async (data) => {
+            const currentUserId = socket.data.userId;
+            const { userId } = data;
+            if (!currentUserId || !userId) {
+                throw new BAD_REQUEST_ERROR('userId is required');
+            }
+            const matchInfo = await Match.findOne({
+                $or: [
+                    { userid1: currentUserId, userid2: userId },
+                    { userid1: userId, userid2: currentUserId }
+                ]
+            });
+            if (!matchInfo) {
+                throw new BAD_REQUEST_ERROR('Match info not found');
+            }
+            if (matchInfo.userid1.toString() === currentUserId) {
+                matchInfo.user1like = true;
+            } else if (matchInfo.userid2.toString() === currentUserId) {
+                matchInfo.user2like = true;
+            }
+            await matchInfo.save();
         })
     });
 
