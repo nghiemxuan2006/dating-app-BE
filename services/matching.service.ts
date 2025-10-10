@@ -179,7 +179,7 @@ async function processMatchingRequest(matchingRequest: MatchingRequest): Promise
                         { userid1: matchResult.user2, userid2: matchResult.user1 }
                     ]
                 },
-                { $set: { user1like: false, user2like: false } },
+                { $set: { user1like: false, user2like: false, status: 'MATCHING' } },
                 { upsert: true }
             );
 

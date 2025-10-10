@@ -5,6 +5,7 @@ import logger from '../utils/matching-worker-log';
 import { BAD_REQUEST_ERROR } from '../utils/error';
 import { UserInfo } from '../models/user';
 import { Match } from '../models/match';
+import { getSocketByUserId } from '../utils/socket';
 
 let io: Server | null = null;
 const mappingUserSocket = new Map<string, string>(); // userId -> socketId
@@ -67,7 +68,7 @@ export function initSocket(server: HTTPServer) {
         })
         socket.on('approve', async (data) => {
             const currentUserId = socket.data.userId;
-            const { userId } = data;
+            const { userId, isApprove } = data;
             if (!currentUserId || !userId) {
                 throw new BAD_REQUEST_ERROR('userId is required');
             }
@@ -81,11 +82,43 @@ export function initSocket(server: HTTPServer) {
                 throw new BAD_REQUEST_ERROR('Match info not found');
             }
             if (matchInfo.userid1.toString() === currentUserId) {
-                matchInfo.user1like = true;
+                matchInfo.user1like = isApprove;
             } else if (matchInfo.userid2.toString() === currentUserId) {
-                matchInfo.user2like = true;
+                matchInfo.user2like = isApprove;
+            }
+            if(!isApprove){
+                matchInfo.status = "CANCELED"
+            }
+            if (matchInfo.user1like && matchInfo.user2like){
+                matchInfo.status = 'APPROVED'
             }
             await matchInfo.save();
+
+            const partnerSocket = getSocketByUserId(userId, io, mappingUserSocket);
+
+            let event = '';
+            let message = '';
+            let partnerMessage = '';
+            if (matchInfo.status === "APPROVED") {
+                event = 'matched';
+                message = 'You two can continue talking.';
+                partnerMessage = 'You two can continue talking.';
+                logger.info(`It's a match between ${matchInfo.userid1} and ${matchInfo.userid2}`);
+                // Here you can add additional logic like sending notifications, etc.
+            } else if (matchInfo.status === "MATCHING"){
+                    event = 'like_received';
+                    message = 'You have liked';
+                    partnerMessage = 'Partner liked you.';
+            }else if (matchInfo.status === "CANCELED"){
+                    event = 'cancel'
+                    message = 'Conversation will be canceled'
+                    partnerMessage = 'Conversation will be canceled'
+            }
+
+            socket.emit(event, { message });
+            if (partnerSocket) {
+                partnerSocket.emit(event, { message: partnerMessage });
+            }
         })
     });
 
