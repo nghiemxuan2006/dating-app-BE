@@ -86,10 +86,10 @@ export function initSocket(server: HTTPServer) {
             } else if (matchInfo.userid2.toString() === currentUserId) {
                 matchInfo.user2like = isApprove;
             }
-            if(!isApprove){
+            if (!isApprove) {
                 matchInfo.status = "CANCELED"
             }
-            if (matchInfo.user1like && matchInfo.user2like){
+            if (matchInfo.user1like && matchInfo.user2like) {
                 matchInfo.status = 'APPROVED'
             }
             await matchInfo.save();
@@ -105,14 +105,14 @@ export function initSocket(server: HTTPServer) {
                 partnerMessage = 'You two can continue talking.';
                 logger.info(`It's a match between ${matchInfo.userid1} and ${matchInfo.userid2}`);
                 // Here you can add additional logic like sending notifications, etc.
-            } else if (matchInfo.status === "MATCHING"){
-                    event = 'like_received';
-                    message = 'You have liked';
-                    partnerMessage = 'Partner liked you.';
-            }else if (matchInfo.status === "CANCELED"){
-                    event = 'cancel'
-                    message = 'Conversation will be canceled'
-                    partnerMessage = 'Conversation will be canceled'
+            } else if (matchInfo.status === "MATCHING") {
+                event = 'like_received';
+                message = 'You have liked';
+                partnerMessage = 'Partner liked you.';
+            } else if (matchInfo.status === "CANCELED") {
+                event = 'cancel'
+                message = 'Conversation will be canceled'
+                partnerMessage = 'Conversation will be canceled'
             }
 
             socket.emit(event, { message });

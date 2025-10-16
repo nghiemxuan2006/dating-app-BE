@@ -162,16 +162,6 @@ async function processMatchingRequest(matchingRequest: MatchingRequest): Promise
             // await redis.setex(`recent_matches:${matchingRequest.userId}`, 86400, JSON.stringify(matchResult));
             // await redis.setex(`recent_matches:${bestMatch.userId}`, 86400, JSON.stringify(matchResult));
 
-            // Publish match result
-            await publisher.publish(MATCH_FOUND_CHANNEL, JSON.stringify(matchResult));
-            // Save match result to Match table
-            await Match.create({
-                user1: matchResult.user1,
-                user2: matchResult.user2,
-                user1like: false,
-                user2like: false,
-            });
-
             await Match.findOneAndUpdate(
                 {
                     $or: [
@@ -179,9 +169,12 @@ async function processMatchingRequest(matchingRequest: MatchingRequest): Promise
                         { userid1: matchResult.user2, userid2: matchResult.user1 }
                     ]
                 },
-                { $set: { user1like: false, user2like: false, status: 'MATCHING' } },
+                { $set: { user1like: false, user2like: false, status: 'MATCHING', userid1: matchResult.user1, userid2: matchResult.user2 } },
                 { upsert: true }
             );
+            // Publish match result
+            await publisher.publish(MATCH_FOUND_CHANNEL, JSON.stringify(matchResult));
+
 
         } else {
             // No match found, add to waiting list
