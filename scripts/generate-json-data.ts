@@ -379,6 +379,7 @@ function generateJSONData(numUsers: number = 50) {
             birthdate: birthdate.toISOString(),
             interests: generateInterests(),
             photos: generatePhotos(),
+            name: username, // Capitalize words
             avatarUrl: generateAvatarUrl(),
             age_range: generateAgeRange(birthdate),
             location: locationData.location,

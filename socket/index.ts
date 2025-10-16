@@ -137,13 +137,13 @@ export function initSocket(server: HTTPServer) {
 
         console.log('Mapping User Sockets:', mappingUserSocket);
         // Emit match result to both users if they are connected
-        const socketId1 = mappingUserSocket.get(matchResult.user1);
-        const socketId2 = mappingUserSocket.get(matchResult.user2);
+        const socketId1 = mappingUserSocket.get(matchResult.user1.id);
+        const socketId2 = mappingUserSocket.get(matchResult.user2.id);
 
         const socket1 = socketId1 ? io.sockets.sockets.get(socketId1) : null;
         const socket2 = socketId2 ? io.sockets.sockets.get(socketId2) : null;
         if (socket1 && socket2) {
-            const room = `match:${matchResult.user1}:${matchResult.user2}`;
+            const room = `match:${matchResult.user1.id}:${matchResult.user2.id}`;
             await new Promise(resolve => setTimeout(resolve, 5000));
             Promise.all([
                 io.to(socketId1).emit('match_found', matchResult.user2),

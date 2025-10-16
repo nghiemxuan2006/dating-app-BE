@@ -389,6 +389,7 @@ async function generateFakeData(numUsers: number = 50) {
             const userInfo = new UserInfo({
                 account: account._id,
                 gender,
+                name: username, // Capitalize words
                 gender_preference: generateGender(),
                 birthdate,
                 interests: generateInterests(),

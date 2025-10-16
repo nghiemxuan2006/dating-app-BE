@@ -15,8 +15,8 @@ export interface MatchingRequest {
 }
 
 export interface MatchResult {
-    user1: string;
-    user2: string;
+    user1: { id: string, name: string, avatarUrl?: string };
+    user2: { id: string, name: string, avatarUrl?: string };
     compatibility_score: number;
     matched_at: number;
 }
@@ -152,8 +152,8 @@ async function processMatchingRequest(matchingRequest: MatchingRequest): Promise
 
             // Store match result in Redis for quick access
             const matchResult: MatchResult = {
-                user1: matchingRequest.userId,
-                user2: bestMatch.userId,
+                user1: { id: matchingRequest.userId, name: matchingRequest.userInfo.name, avatarUrl: matchingRequest.userInfo.avatarUrl },
+                user2: { id: bestMatch.userId, name: bestMatch.profile.name, avatarUrl: bestMatch.profile.avatarUrl },
                 compatibility_score: bestScore,
                 matched_at: Date.now()
             };
@@ -165,11 +165,11 @@ async function processMatchingRequest(matchingRequest: MatchingRequest): Promise
             await Match.findOneAndUpdate(
                 {
                     $or: [
-                        { userid1: matchResult.user1, userid2: matchResult.user2 },
-                        { userid1: matchResult.user2, userid2: matchResult.user1 }
+                        { userid1: matchResult.user1.id, userid2: matchResult.user2.id },
+                        { userid1: matchResult.user2.id, userid2: matchResult.user1.id }
                     ]
                 },
-                { $set: { user1like: false, user2like: false, status: 'MATCHING', userid1: matchResult.user1, userid2: matchResult.user2 } },
+                { $set: { user1like: false, user2like: false, status: 'MATCHING', userid1: matchResult.user1.id, userid2: matchResult.user2.id } },
                 { upsert: true }
             );
             // Publish match result
