@@ -1,5 +1,5 @@
 import * as jwt from 'jsonwebtoken';
-import { Account, IAccount } from '../models/user';
+import { Account, IAccount, UserInfo } from '../models/user';
 import settings from '../config/env';
 import { UNAUTHORIZED_ERROR, NOT_FOUND_ERROR, BAD_REQUEST_ERROR } from '../utils/error';
 
@@ -19,7 +19,7 @@ class AuthService {
     generateAccessToken(payload: TokenPayload): string {
         const secret = settings.JWT_SECRET_KEY || 'fallback-secret';
         return jwt.sign(payload as any, secret, {
-            expiresIn: '15m'
+            expiresIn: '7d'
         });
     }
 
@@ -144,7 +144,22 @@ class AuthService {
         }
 
         return user;
-    }
+    };
+
+    async getUserProfileById(userId: string) {
+        const user = await UserInfo.findOne({ account: userId });
+
+        if (!user) {
+            throw new NOT_FOUND_ERROR('User profile not found');
+        }
+
+        // Ensure the profile belongs to the requested account (account may be an ObjectId)
+        if ((user as any).account && (user as any).account.toString() !== userId) {
+            throw new UNAUTHORIZED_ERROR('Account does not match profile');
+        }
+
+        return user;
+    };
 }
 
 export default new AuthService();

@@ -115,14 +115,12 @@ class AuthController {
             }
 
             // Get user profile
-            const user = await authService.getUserById(userId);
+            const user = await authService.getUserProfileById(userId);
 
             res.status(httpStatus.OK).json({
                 success: true,
                 message: 'Profile retrieved successfully',
-                data: {
-                    user
-                }
+                data: user
             });
         } catch (error) {
             next(error);
