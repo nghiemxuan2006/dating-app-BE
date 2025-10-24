@@ -10,6 +10,7 @@ export interface AuthRequest extends Request {
         username: string;
         email: string;
     };
+    query: { id?: string; }
 }
 
 class AuthController {
@@ -108,14 +109,29 @@ class AuthController {
     // Get current user profile
     async getProfile(req: AuthRequest, res: Response, next: NextFunction) {
         try {
-            const userId = req.user?.id;
+            const currentUserId = req.user?.id;
+            const userId = req.query?.id;
+            let user = null;
 
-            if (!userId) {
+            if (!currentUserId) {
                 throw new BAD_REQUEST_ERROR('User ID is required');
             }
+            if (!userId) {
+                // Get user profile
+                user = await authService.getUserProfileById(currentUserId);
+            } else {
+                if (userId === currentUserId) {
+                    throw new BAD_REQUEST_ERROR('Cannot get profile of the current logged in user');
+                }
 
-            // Get user profile
-            const user = await authService.getUserProfileById(userId);
+                const match = await authService.getMatch(currentUserId, userId);
+                if (!match || match.status !== 'APPROVED') {
+                    throw new BAD_REQUEST_ERROR('User is not approved for this action');
+                } else {
+                    // Get user profile
+                    user = await authService.getUserProfileById(userId);
+                }
+            }
 
             res.status(httpStatus.OK).json({
                 success: true,

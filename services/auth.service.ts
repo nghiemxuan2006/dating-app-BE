@@ -2,6 +2,7 @@ import * as jwt from 'jsonwebtoken';
 import { Account, IAccount, UserInfo } from '../models/user';
 import settings from '../config/env';
 import { UNAUTHORIZED_ERROR, NOT_FOUND_ERROR, BAD_REQUEST_ERROR } from '../utils/error';
+import { IMatch, Match } from '../models/match';
 
 export interface TokenPayload {
     id: string;
@@ -160,6 +161,16 @@ class AuthService {
 
         return user;
     };
+
+    async getMatch(userid1: string, userid2: string): Promise<IMatch | null> {
+        const match = await Match.findOne({
+            $or: [
+                { userid1, userid2 },
+                { userid1: userid2, userid2: userid1 }
+            ]
+        });
+        return match;
+    }
 }
 
 export default new AuthService();
