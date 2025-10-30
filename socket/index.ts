@@ -41,8 +41,8 @@ export function initSocket(server: HTTPServer) {
                 logger.info(`User ${userId} disconnected and removed from mapping.`);
             }
         });
-        socket.on('matching', async (data) => {
-            const userId = data.userId;
+        socket.on('matching', async () => {
+            const userId = socket.data.userId;
             if (!userId) {
                 throw new BAD_REQUEST_ERROR('userId is required');
             }
@@ -59,6 +59,7 @@ export function initSocket(server: HTTPServer) {
             // Prepare matching request
             const matchingRequest: MatchingRequest = {
                 userId: userId,
+                socketId: socket.id,
                 userInfo: userProfile,
                 timestamp: Date.now()
             };
@@ -72,6 +73,8 @@ export function initSocket(server: HTTPServer) {
             if (!currentUserId || !userId) {
                 throw new BAD_REQUEST_ERROR('userId is required');
             }
+
+            // 
             const matchInfo = await Match.findOne({
                 $or: [
                     { userid1: currentUserId, userid2: userId },

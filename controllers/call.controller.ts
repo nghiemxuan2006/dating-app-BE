@@ -21,6 +21,7 @@ const matching = async (req: any, res: any) => {
         // Prepare matching request
         const matchingRequest: MatchingRequest = {
             userId: userId,
+            socketId: '', // No socketId in HTTP request context
             userInfo: userProfile,
             timestamp: Date.now()
         };

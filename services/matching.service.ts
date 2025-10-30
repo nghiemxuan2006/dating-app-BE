@@ -10,13 +10,14 @@ const MATCH_FOUND_CHANNEL = 'match_found';
 
 export interface MatchingRequest {
     userId: string;
+    socketId: string;
     userInfo: IUserInfo;
     timestamp: number;
 }
 
 export interface MatchResult {
-    user1: { id: string, name: string, avatarUrl?: string };
-    user2: { id: string, name: string, avatarUrl?: string };
+    user1: { id: string, name: string, avatarUrl: string, socketId: string };
+    user2: { id: string, name: string, avatarUrl: string, socketId: string };
     compatibility_score: number;
     matched_at: number;
 }
@@ -152,15 +153,15 @@ async function processMatchingRequest(matchingRequest: MatchingRequest): Promise
 
             // Store match result in Redis for quick access
             const matchResult: MatchResult = {
-                user1: { id: matchingRequest.userId, name: matchingRequest.userInfo.name, avatarUrl: matchingRequest.userInfo.avatarUrl },
-                user2: { id: bestMatch.userId, name: bestMatch.profile.name, avatarUrl: bestMatch.profile.avatarUrl },
+                user1: { id: matchingRequest.userId, name: matchingRequest.userInfo.name, avatarUrl: matchingRequest.userInfo.avatarUrl, socketId: matchingRequest.socketId },
+                user2: { id: bestMatch.userId, name: bestMatch.profile.name, avatarUrl: bestMatch.profile.avatarUrl, socketId: bestMatch.socketId },
                 compatibility_score: bestScore,
                 matched_at: Date.now()
             };
 
-            // Store recent matches for both users (expire in 24 hours)
-            // await redis.setex(`recent_matches:${matchingRequest.userId}`, 86400, JSON.stringify(matchResult));
-            // await redis.setex(`recent_matches:${bestMatch.userId}`, 86400, JSON.stringify(matchResult));
+            // Store recent matches for both users (expire in 5 minutes)
+            await redis.setex(`recent_matches:chat:${matchingRequest.socketId}`, 300, JSON.stringify(matchResult));
+            await redis.setex(`recent_matches:chat:${bestMatch.socketId}`, 300, JSON.stringify(matchResult));
 
             await Match.findOneAndUpdate(
                 {
@@ -182,7 +183,8 @@ async function processMatchingRequest(matchingRequest: MatchingRequest): Promise
 
             const waitingUser: WaitingUser = {
                 userId: matchingRequest.userId,
-                profile: matchingRequest.userInfo
+                profile: matchingRequest.userInfo,
+                socketId: matchingRequest.socketId
             };
 
             await addWaitingUser(waitingUser);

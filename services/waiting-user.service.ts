@@ -6,6 +6,7 @@ const WAITING_USERS_KEY = 'waiting_users';
 export interface WaitingUser {
     userId: string;
     profile: IUserInfo;
+    socketId: string;
 }
 
 export async function addWaitingUser(user: WaitingUser) {
