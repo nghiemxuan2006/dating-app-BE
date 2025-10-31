@@ -153,15 +153,25 @@ async function processMatchingRequest(matchingRequest: MatchingRequest): Promise
 
             // Store match result in Redis for quick access
             const matchResult: MatchResult = {
-                user1: { id: matchingRequest.userId, name: matchingRequest.userInfo.name, avatarUrl: matchingRequest.userInfo.avatarUrl, socketId: matchingRequest.socketId },
-                user2: { id: bestMatch.userId, name: bestMatch.profile.name, avatarUrl: bestMatch.profile.avatarUrl, socketId: bestMatch.socketId },
+                user1: {
+                    id: matchingRequest.userId,
+                    name: matchingRequest.userInfo.name,
+                    avatarUrl: matchingRequest.userInfo.avatarUrl,
+                    socketId: matchingRequest.socketId,
+                },
+                user2: {
+                    id: bestMatch.userId,
+                    name: bestMatch.profile.name,
+                    avatarUrl: bestMatch.profile.avatarUrl,
+                    socketId: bestMatch.socketId,
+                },
                 compatibility_score: bestScore,
                 matched_at: Date.now()
             };
 
             // Store recent matches for both users (expire in 5 minutes)
-            await redis.setex(`recent_matches:chat:${matchingRequest.socketId}`, 300, JSON.stringify(matchResult));
-            await redis.setex(`recent_matches:chat:${bestMatch.socketId}`, 300, JSON.stringify(matchResult));
+            await redis.setex(`recent_matches:chat:${bestMatch.socketId}`, 300, JSON.stringify(matchResult.user1));
+            await redis.setex(`recent_matches:chat:${matchingRequest.socketId}`, 300, JSON.stringify(matchResult.user2));
 
             await Match.findOneAndUpdate(
                 {
@@ -196,7 +206,7 @@ async function processMatchingRequest(matchingRequest: MatchingRequest): Promise
 }
 
 // Remove user from waiting list
-async function removeUserFromWaitingList(userId: string): Promise<void> {
+export async function removeUserFromWaitingList(userId: string): Promise<void> {
     try {
         const waitingUsers = await getWaitingUsers();
         const filteredUsers = waitingUsers.filter(user => user.userId !== userId);

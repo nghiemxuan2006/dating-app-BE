@@ -1,11 +1,12 @@
 import { Server } from 'socket.io';
 import type { Server as HTTPServer } from 'http';
-import { MatchingRequest, MatchResult, publishMatchingRequest, startMatchResultSubscriber } from '../services/matching.service';
+import { MatchingRequest, MatchResult, publishMatchingRequest, removeUserFromWaitingList, startMatchResultSubscriber } from '../services/matching.service';
 import logger from '../utils/matching-worker-log';
 import { BAD_REQUEST_ERROR } from '../utils/error';
 import { UserInfo } from '../models/user';
 import { Match } from '../models/match';
 import { getSocketByUserId } from '../utils/socket';
+import { redis } from '../config/redis';
 
 let io: Server | null = null;
 const mappingUserSocket = new Map<string, string>(); // userId -> socketId
@@ -22,7 +23,6 @@ export function initSocket(server: HTTPServer) {
         const userId = socket.handshake.auth.userId;
         console.log("🚀 ~ initSocket ~ userId:", userId)
 
-        mappingUserSocket.set(userId, socket.id);
         socket.data.userId = userId;
         next();
     });
@@ -34,20 +34,37 @@ export function initSocket(server: HTTPServer) {
             socket.join(`user:${userId}`);
         });
 
-        socket.on('disconnect', () => {
-            const userId = socket.data.userId;
-            if (userId) {
-                mappingUserSocket.delete(userId);
-                logger.info(`User ${userId} disconnected and removed from mapping.`);
-            }
+        socket.on('disconnect', async () => {
+            const socketId = socket.id;
+            logger.info(`Socket disconnected: ${socketId}`);
+            const key = "recent_matches:chat:" + socketId;
+            try {
+                const partnerInfo = JSON.parse(await redis.get(key));
+                const partnerSocketId = partnerInfo.socketId;
+                io.to(partnerSocketId).emit('cancel', { message: 'Your chat partner has disconnected.' });
+                await redis.del(key);
+                await redis.del("recent_matches:chat:" + partnerSocketId);
+            } catch (error) { }
+
         });
-        socket.on('matching', async () => {
+
+        socket.on('cancel_matching', async () => {
             const userId = socket.data.userId;
             if (!userId) {
                 throw new BAD_REQUEST_ERROR('userId is required');
             }
+            logger.info(`User ${userId} requested to cancel matching.`);
+            // Here you can add logic to remove the user from the matching queue
+            // For example, you might publish a cancel event to Redis or update a database record
+            await removeUserFromWaitingList(userId);
+        });
+        socket.on('matching', async () => {
 
-            mappingUserSocket.set(userId, socket.id);
+            console.log('🚀 ~ socket.on ~ matching event received from socket:', socket.id);
+            const userId = socket.data.userId;
+            if (!userId) {
+                throw new BAD_REQUEST_ERROR('userId is required');
+            }
 
             // Fetch user profile from database
             const userProfile = await UserInfo.findOne({ account: userId }).populate('account');
@@ -63,6 +80,7 @@ export function initSocket(server: HTTPServer) {
                 userInfo: userProfile,
                 timestamp: Date.now()
             };
+            console.log("🚀 ~ initSocket ~ matchingRequest:", matchingRequest)
 
             // Publish matching request to Redis
             await publishMatchingRequest(matchingRequest);
@@ -97,7 +115,10 @@ export function initSocket(server: HTTPServer) {
             }
             await matchInfo.save();
 
-            const partnerSocket = getSocketByUserId(userId, io, mappingUserSocket);
+            // const partnerSocket = getSocketByUserId(userId, io, mappingUserSocket);
+            const key = "recent_matches:chat:" + socket.id;
+            const partnerInfo = JSON.parse(await redis.get(key));
+            const partnerSocketId = partnerInfo.socketId;
 
             let event = '';
             let message = '';
@@ -107,6 +128,9 @@ export function initSocket(server: HTTPServer) {
                 message = 'You two can continue talking.';
                 partnerMessage = 'You two can continue talking.';
                 logger.info(`It's a match between ${matchInfo.userid1} and ${matchInfo.userid2}`);
+                await redis.del(key);
+                await redis.del("recent_matches:chat:" + partnerSocketId);
+
                 // Here you can add additional logic like sending notifications, etc.
             } else if (matchInfo.status === "MATCHING") {
                 event = 'like_received';
@@ -116,12 +140,12 @@ export function initSocket(server: HTTPServer) {
                 event = 'cancel'
                 message = 'Conversation will be canceled'
                 partnerMessage = 'Conversation will be canceled'
+                await redis.del(key);
+                await redis.del("recent_matches:chat:" + partnerSocketId);
             }
 
             socket.emit(event, { message });
-            if (partnerSocket) {
-                partnerSocket.emit(event, { message: partnerMessage });
-            }
+            io.to(partnerSocketId).emit(event, { message: partnerMessage });
         })
     });
 
@@ -140,8 +164,8 @@ export function initSocket(server: HTTPServer) {
 
         console.log('Mapping User Sockets:', mappingUserSocket);
         // Emit match result to both users if they are connected
-        const socketId1 = mappingUserSocket.get(matchResult.user1.id);
-        const socketId2 = mappingUserSocket.get(matchResult.user2.id);
+        const socketId1 = matchResult.user1.socketId;
+        const socketId2 = matchResult.user2.socketId;
 
         const socket1 = socketId1 ? io.sockets.sockets.get(socketId1) : null;
         const socket2 = socketId2 ? io.sockets.sockets.get(socketId2) : null;
