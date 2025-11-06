@@ -2,6 +2,7 @@ import express from 'express';
 
 import callRoutes from './call.route';
 import authRoutes from './auth.route';
+import chatRoutes from './chat.route';
 import verifyToken from '../middleware/verify-token';
 
 const router = express.Router();
@@ -9,5 +10,6 @@ const router = express.Router();
 router.use('/auth', authRoutes);
 // router.use('/call', verifyToken, callRoutes);
 router.use('/call', callRoutes);
+router.use('/chat', verifyToken, chatRoutes);
 
 export default router;
