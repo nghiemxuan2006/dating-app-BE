@@ -14,6 +14,11 @@ const settings = {
     MONGODB_PASSWORD: process.env.MONGODB_PASSWORD || '',
     MONGODB_HOST: process.env.MONGODB_HOST || 'localhost',
     MONGODB_SERVER_PORT: process.env.MONGODB_SERVER_PORT || '27017',
+    // ZEGOCLOUD ZIM server API credentials and region (optional)
+    ZIM_APP_ID: process.env.ZIM_APP_ID || '',
+    ZIM_SERVER_SECRET: process.env.ZIM_SERVER_SECRET || '',
+    // Region short code: sha | hkg | fra | lax | bom | sgp | or leave empty for global endpoint
+    ZIM_REGION: process.env.ZIM_REGION || '',
     // Add more environment variables as needed
 };
 

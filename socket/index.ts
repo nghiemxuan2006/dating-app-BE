@@ -7,6 +7,7 @@ import { UserInfo } from '../models/user';
 import { Match } from '../models/match';
 import { getSocketByUserId } from '../utils/socket';
 import { redis } from '../config/redis';
+import zimService from '../services/zim.service';
 
 let io: Server | null = null;
 const mappingUserSocket = new Map<string, string>(); // userId -> socketId
@@ -36,15 +37,30 @@ export function initSocket(server: HTTPServer) {
 
         socket.on('disconnect', async () => {
             const socketId = socket.id;
+            const currentUserId = socket.data.userId;
             logger.info(`Socket disconnected: ${socketId}`);
             const key = "recent_matches:chat:" + socketId;
             try {
                 const partnerInfo = JSON.parse(await redis.get(key));
                 const partnerSocketId = partnerInfo.socketId;
                 io.to(partnerSocketId).emit('cancel', { message: 'Your chat partner has disconnected.' });
+
+                const res = await zimService.deleteConversation({
+                    FromUserId: currentUserId,
+                    ConvId: partnerInfo.id,
+                    ConvType: 0
+                });
+                const res2 = await zimService.deleteAllMessage({
+                    FromUserId: currentUserId,
+                    ToUserId: partnerInfo.id
+                });
+                const conversationList = await zimService.getConversationList({ FromUserId: currentUserId });
+                logger.info(`Deleted conversation and messages between ${currentUserId} and ${partnerInfo.id}:`, res, res2);
                 await redis.del(key);
                 await redis.del("recent_matches:chat:" + partnerSocketId);
-            } catch (error) { }
+            } catch (error) {
+                console.log("🚀 ~ initSocket ~ error:", error)
+            }
 
         });
 

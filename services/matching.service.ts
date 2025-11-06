@@ -2,7 +2,7 @@ import { addWaitingUser, getWaitingUsers, WaitingUser } from './waiting-user.ser
 import { IUserInfo } from '../models/user';
 import logger from '../utils/wiston-log';
 import { COORDINATE_INDEX } from '../utils/constants';
-import { publisher, redis, subscriber } from '../config/redis';
+import { publisher, redis, newSubscriber } from '../config/redis';
 import { Match } from '../models/match'; // Ensure you have a Match model
 
 const MATCHING_CHANNEL = 'user_matching';
@@ -225,7 +225,9 @@ export async function removeUserFromWaitingList(userId: string): Promise<void> {
 
 // Subscribe to matching requests
 export function startMatchingSubscriber(): void {
-    subscriber.subscribe(MATCHING_CHANNEL, (err, count) => {
+    // Use a dedicated subscriber for matching requests to avoid conflicts
+    const matchingSubscriber = newSubscriber();
+    matchingSubscriber.subscribe(MATCHING_CHANNEL, (err, count) => {
         if (err) {
             logger.error('Error subscribing to matching channel:', err);
             return;
@@ -233,7 +235,7 @@ export function startMatchingSubscriber(): void {
         logger.info(`Subscribed to ${count} channel(s). Listening for matching requests...`);
     });
 
-    subscriber.on('message', async (channel, message) => {
+    matchingSubscriber.on('message', async (channel, message) => {
         if (channel === MATCHING_CHANNEL) {
             try {
                 const matchingRequest: MatchingRequest = JSON.parse(message);
@@ -245,14 +247,16 @@ export function startMatchingSubscriber(): void {
         }
     });
 
-    subscriber.on('error', (error) => {
+    matchingSubscriber.on('error', (error) => {
         logger.error('Redis subscriber error:', error);
     });
 }
 
 // Subscribe to match results (for notifications, logging, etc.)
 export function startMatchResultSubscriber(callback: (matchResult: MatchResult) => void): void {
-    subscriber.subscribe(MATCH_FOUND_CHANNEL, (err, count) => {
+    // Use a dedicated subscriber for match results to keep concerns isolated
+    const resultSubscriber = newSubscriber();
+    resultSubscriber.subscribe(MATCH_FOUND_CHANNEL, (err, count) => {
         if (err) {
             logger.error('Error subscribing to match result channel:', err);
             return;
@@ -260,7 +264,7 @@ export function startMatchResultSubscriber(callback: (matchResult: MatchResult) 
         logger.info(`Subscribed to match result channel. Listening for match notifications...`);
     });
 
-    subscriber.on('message', async (channel, message) => {
+    resultSubscriber.on('message', async (channel, message) => {
         if (channel === MATCH_FOUND_CHANNEL) {
             try {
                 const matchResult: MatchResult = JSON.parse(message);
@@ -275,7 +279,6 @@ export function startMatchResultSubscriber(callback: (matchResult: MatchResult) 
 
 export {
     publisher,
-    subscriber,
     MATCHING_CHANNEL,
     MATCH_FOUND_CHANNEL
 };
