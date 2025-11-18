@@ -13,6 +13,7 @@ export interface MatchingRequest {
     socketId: string;
     userInfo: IUserInfo;
     timestamp: number;
+    type: string;
 }
 
 export interface MatchResult {
@@ -20,6 +21,7 @@ export interface MatchResult {
     user2: { id: string, name: string, avatarUrl: string, socketId: string };
     compatibility_score: number;
     matched_at: number;
+    type: string;
 }
 
 // Calculate compatibility score between two users
@@ -121,7 +123,7 @@ async function processMatchingRequest(matchingRequest: MatchingRequest): Promise
         logger.info(`Processing matching request for user ${matchingRequest.userId}`);
 
         // Get all waiting users
-        const waitingUsers = await getWaitingUsers();
+        const waitingUsers = await getWaitingUsers(matchingRequest.type);
         logger.info(`Found ${waitingUsers.length} waiting users`);
 
         let bestMatch: WaitingUser | null = null;
@@ -149,7 +151,7 @@ async function processMatchingRequest(matchingRequest: MatchingRequest): Promise
             logger.info(`Match found! ${matchingRequest.userId} matched with ${bestMatch.userId} (score: ${bestScore})`);
 
             // Remove the matched user from waiting list
-            await removeUserFromWaitingList(bestMatch.userId);
+            await removeUserFromWaitingList(bestMatch.userId, matchingRequest.type);
 
             // Store match result in Redis for quick access
             const matchResult: MatchResult = {
@@ -166,7 +168,8 @@ async function processMatchingRequest(matchingRequest: MatchingRequest): Promise
                     socketId: bestMatch.socketId,
                 },
                 compatibility_score: bestScore,
-                matched_at: Date.now()
+                matched_at: Date.now(),
+                type: matchingRequest.type
             };
 
             // Store recent matches for both users (expire in 5 minutes)
@@ -197,7 +200,7 @@ async function processMatchingRequest(matchingRequest: MatchingRequest): Promise
                 socketId: matchingRequest.socketId
             };
 
-            await addWaitingUser(waitingUser);
+            await addWaitingUser(waitingUser, matchingRequest.type);
         }
 
     } catch (error) {
@@ -206,15 +209,15 @@ async function processMatchingRequest(matchingRequest: MatchingRequest): Promise
 }
 
 // Remove user from waiting list
-export async function removeUserFromWaitingList(userId: string): Promise<void> {
+export async function removeUserFromWaitingList(userId: string, type: string): Promise<void> {
     try {
-        const waitingUsers = await getWaitingUsers();
+        const waitingUsers = await getWaitingUsers(type);
         const filteredUsers = waitingUsers.filter(user => user.userId !== userId);
 
         // Clear the list and add back all users except the removed one
-        await redis.del('waiting_users');
+        await redis.del(`waiting_users:${type}`);
         for (const user of filteredUsers) {
-            await addWaitingUser(user);
+            await addWaitingUser(user, type);
         }
 
         logger.info(`Removed user ${userId} from waiting list`);

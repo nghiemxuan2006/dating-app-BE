@@ -54,7 +54,6 @@ export function initSocket(server: HTTPServer) {
                     FromUserId: currentUserId,
                     ToUserId: partnerInfo.id
                 });
-                const conversationList = await zimService.getConversationList({ FromUserId: currentUserId });
                 logger.info(`Deleted conversation and messages between ${currentUserId} and ${partnerInfo.id}:`, res, res2);
                 await redis.del(key);
                 await redis.del("recent_matches:chat:" + partnerSocketId);
@@ -64,7 +63,7 @@ export function initSocket(server: HTTPServer) {
 
         });
 
-        socket.on('cancel_matching', async () => {
+        socket.on('cancel_matching', async (type: string) => {
             const userId = socket.data.userId;
             if (!userId) {
                 throw new BAD_REQUEST_ERROR('userId is required');
@@ -72,9 +71,9 @@ export function initSocket(server: HTTPServer) {
             logger.info(`User ${userId} requested to cancel matching.`);
             // Here you can add logic to remove the user from the matching queue
             // For example, you might publish a cancel event to Redis or update a database record
-            await removeUserFromWaitingList(userId);
+            await removeUserFromWaitingList(userId, type);
         });
-        socket.on('matching', async () => {
+        socket.on('matching', async (type: string) => {
 
             console.log('🚀 ~ socket.on ~ matching event received from socket:', socket.id);
             const userId = socket.data.userId;
@@ -94,7 +93,8 @@ export function initSocket(server: HTTPServer) {
                 userId: userId,
                 socketId: socket.id,
                 userInfo: userProfile,
-                timestamp: Date.now()
+                timestamp: Date.now(),
+                type: type
             };
             console.log("🚀 ~ initSocket ~ matchingRequest:", matchingRequest)
 
@@ -186,12 +186,19 @@ export function initSocket(server: HTTPServer) {
         const socket1 = socketId1 ? io.sockets.sockets.get(socketId1) : null;
         const socket2 = socketId2 ? io.sockets.sockets.get(socketId2) : null;
         if (socket1 && socket2) {
-            const room = `match:${matchResult.user1.id}:${matchResult.user2.id}`;
+            const room = `match_${matchResult.user1.id}_${matchResult.user2.id}`;
             await new Promise(resolve => setTimeout(resolve, 5000));
-            Promise.all([
-                io.to(socketId1).emit('match_found', matchResult.user2),
-                io.to(socketId2).emit('match_found', matchResult.user1)
-            ]);
+            if (matchResult.type === 'chat') {
+                Promise.all([
+                    io.to(socketId1).emit('match_found', matchResult.user2),
+                    io.to(socketId2).emit('match_found', matchResult.user1)
+                ]);
+            } else if (matchResult.type === 'call') {
+                Promise.all([
+                    io.to(socketId1).emit('match_found', room),
+                    io.to(socketId2).emit('match_found', room)
+                ]);
+            }
             // socket1.join(room);
             // socket2.join(room);
             // io.to(room).emit('match_found', room);
