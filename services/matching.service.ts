@@ -173,8 +173,8 @@ async function processMatchingRequest(matchingRequest: MatchingRequest): Promise
             };
 
             // Store recent matches for both users (expire in 5 minutes)
-            await redis.setex(`recent_matches:chat:${bestMatch.socketId}`, 300, JSON.stringify(matchResult.user1));
-            await redis.setex(`recent_matches:chat:${matchingRequest.socketId}`, 300, JSON.stringify(matchResult.user2));
+            await redis.setex(`recent_matches:${matchingRequest.type}:${bestMatch.socketId}`, 300, JSON.stringify(matchResult.user1));
+            await redis.setex(`recent_matches:${matchingRequest.type}:${matchingRequest.socketId}`, 300, JSON.stringify(matchResult.user2));
 
             await Match.findOneAndUpdate(
                 {

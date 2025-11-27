@@ -8,11 +8,34 @@ import { Match } from '../models/match';
 import { getSocketByUserId } from '../utils/socket';
 import { redis } from '../config/redis';
 import zimService from '../services/zim.service';
+import Redis from 'ioredis';
 
 let io: Server | null = null;
 const mappingUserSocket = new Map<string, string>(); // userId -> socketId
 
 const SOCKET_EVENTS_CHANNEL = 'socket_events';
+
+const deleteRemaingData = async (type: string, socketId: string, currentUserId: string, redis: Redis) => {
+    try {
+        const key = `recent_matches:${type}:${socketId}`;
+        const partnerInfo = JSON.parse(await redis.get(key));
+        const partnerSocketId = partnerInfo.socketId;
+        const res = await zimService.deleteConversation({
+            FromUserId: currentUserId,
+            ConvId: partnerInfo.id,
+            ConvType: 0
+        });
+        const res2 = await zimService.deleteAllMessage({
+            FromUserId: currentUserId,
+            ToUserId: partnerInfo.id
+        });
+        await redis.del(key);
+        await redis.del(`recent_matches:${type}:${partnerSocketId}`);
+        io.to(partnerSocketId).emit('cancel', { message: 'Your chat partner has disconnected.' });
+    } catch (error) {
+        console.error('Error deleting remaining data:', type, error);
+    }
+}
 
 export function initSocket(server: HTTPServer) {
     io = new Server(server, {
@@ -39,28 +62,8 @@ export function initSocket(server: HTTPServer) {
             const socketId = socket.id;
             const currentUserId = socket.data.userId;
             logger.info(`Socket disconnected: ${socketId}`);
-            const key = "recent_matches:chat:" + socketId;
-            try {
-                const partnerInfo = JSON.parse(await redis.get(key));
-                const partnerSocketId = partnerInfo.socketId;
-                io.to(partnerSocketId).emit('cancel', { message: 'Your chat partner has disconnected.' });
-
-                const res = await zimService.deleteConversation({
-                    FromUserId: currentUserId,
-                    ConvId: partnerInfo.id,
-                    ConvType: 0
-                });
-                const res2 = await zimService.deleteAllMessage({
-                    FromUserId: currentUserId,
-                    ToUserId: partnerInfo.id
-                });
-                logger.info(`Deleted conversation and messages between ${currentUserId} and ${partnerInfo.id}:`, res, res2);
-                await redis.del(key);
-                await redis.del("recent_matches:chat:" + partnerSocketId);
-            } catch (error) {
-                console.log("🚀 ~ initSocket ~ error:", error)
-            }
-
+            deleteRemaingData('chat', socketId, currentUserId, redis);
+            deleteRemaingData('call', socketId, currentUserId, redis);
         });
 
         socket.on('cancel_matching', async (type: string) => {
@@ -103,7 +106,7 @@ export function initSocket(server: HTTPServer) {
         })
         socket.on('approve', async (data) => {
             const currentUserId = socket.data.userId;
-            const { userId, isApprove } = data;
+            const { userId, isApprove, type } = data;
             if (!currentUserId || !userId) {
                 throw new BAD_REQUEST_ERROR('userId is required');
             }
@@ -132,7 +135,7 @@ export function initSocket(server: HTTPServer) {
             await matchInfo.save();
 
             // const partnerSocket = getSocketByUserId(userId, io, mappingUserSocket);
-            const key = "recent_matches:chat:" + socket.id;
+            const key = `recent_matches:${type}:` + socket.id;
             const partnerInfo = JSON.parse(await redis.get(key));
             const partnerSocketId = partnerInfo.socketId;
 
@@ -145,7 +148,7 @@ export function initSocket(server: HTTPServer) {
                 partnerMessage = 'You two can continue talking.';
                 logger.info(`It's a match between ${matchInfo.userid1} and ${matchInfo.userid2}`);
                 await redis.del(key);
-                await redis.del("recent_matches:chat:" + partnerSocketId);
+                await redis.del(`recent_matches:${type}:` + partnerSocketId);
 
                 // Here you can add additional logic like sending notifications, etc.
             } else if (matchInfo.status === "MATCHING") {
@@ -157,7 +160,7 @@ export function initSocket(server: HTTPServer) {
                 message = 'Conversation will be canceled'
                 partnerMessage = 'Conversation will be canceled'
                 await redis.del(key);
-                await redis.del("recent_matches:chat:" + partnerSocketId);
+                await redis.del(`recent_matches:${type}:` + partnerSocketId);
             }
 
             socket.emit(event, { message });
@@ -195,8 +198,8 @@ export function initSocket(server: HTTPServer) {
                 ]);
             } else if (matchResult.type === 'call') {
                 Promise.all([
-                    io.to(socketId1).emit('match_found', room),
-                    io.to(socketId2).emit('match_found', room)
+                    io.to(socketId1).emit('match_found', { room, user: matchResult.user2 }),
+                    io.to(socketId2).emit('match_found', { room, user: matchResult.user1 })
                 ]);
             }
             // socket1.join(room);
