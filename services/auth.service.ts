@@ -1,5 +1,5 @@
 import * as jwt from 'jsonwebtoken';
-import { Account, IAccount, UserInfo } from '../models/user';
+import { Account, IAccount, IUserInfo, UserInfo } from '../models/user';
 import settings from '../config/env';
 import { UNAUTHORIZED_ERROR, NOT_FOUND_ERROR, BAD_REQUEST_ERROR } from '../utils/error';
 import { IMatch, Match } from '../models/match';
@@ -170,6 +170,120 @@ class AuthService {
             ]
         });
         return match;
+    }
+
+    // Calculate age from birthdate
+    private calculateAge(birthdate: Date): number {
+        const today = new Date();
+        let age = today.getFullYear() - birthdate.getFullYear();
+        const monthDiff = today.getMonth() - birthdate.getMonth();
+
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthdate.getDate())) {
+            age--;
+        }
+
+        return age;
+    }
+
+    // Get potential profiles based on multiple criteria
+    async getPotentialProfiles(
+        user: IUserInfo,
+    ) {
+        if (!user) {
+            throw new NOT_FOUND_ERROR('User profile not found');
+        }
+
+        if (!user.location) {
+            throw new BAD_REQUEST_ERROR('User location is required to find potential profiles');
+        }
+
+        const currentUserAge = this.calculateAge(new Date(user.birthdate));
+
+        // Build base query
+        const query: any = {
+            account: { $ne: user._id }, // Exclude current user
+            gender: user.gender_preference, // Match gender preference
+        };
+
+        // Filter by age range if preferences are set
+        if (user.age_range) {
+            query.birthdate = {
+                $gte: new Date(new Date().getFullYear() - user.age_range.max, new Date().getMonth(), new Date().getDate()),
+                $lte: new Date(new Date().getFullYear() - user.age_range.min, new Date().getMonth(), new Date().getDate())
+            };
+        }
+
+        // Filter by distance using geospatial query
+        const maxDistance = 5; // in kilometers
+        const distanceInMeters = maxDistance * 1000; // Convert km to meters
+        query.location = {
+            $near: {
+                $geometry: {
+                    type: 'Point',
+                    coordinates: user.location.coordinates
+                },
+                $maxDistance: distanceInMeters
+            }
+        };
+
+        // Execute base query
+        let profiles = await UserInfo.find(query).select('-password');
+
+        // Filter by interests (preferences must fit >= 2 options)
+        if (user.interests && user.interests.length > 0) {
+            profiles = profiles.filter(profile => {
+                if (!profile.interests) return false;
+                const commonInterests = profile.interests.filter(interest =>
+                    user.interests!.includes(interest)
+                );
+                return commonInterests.length >= 2;
+            });
+        }
+
+        // Filter by description using semantic text matching
+        if (user.description) {
+            const keywords = user.description.toLowerCase().split(/\s+/);
+            profiles = profiles.filter(profile => {
+                if (!profile.name && !profile.location_string) return false;
+
+                const searchableText = `${profile.name || ''} ${profile.location_string || ''}`.toLowerCase();
+                return keywords.some(keyword => searchableText.includes(keyword));
+            });
+        }
+
+        // Filter by mutual gender preference
+        profiles = profiles.filter(profile => {
+            return profile.gender_preference === user.gender;
+        });
+
+        // Filter by mutual age range (if set)
+        if (profiles.length > 0) {
+            profiles = profiles.filter(profile => {
+                if (!profile.age_range) return true;
+                return currentUserAge >= profile.age_range.min && currentUserAge <= profile.age_range.max;
+            });
+        }
+
+        // Exclude users with existing matches
+        const existingMatches = await Match.find({
+            $or: [
+                { userid1: user._id },
+                { userid2: user._id }
+            ]
+        }).select('userid1 userid2');
+
+        const matchedUserIds = new Set(
+            existingMatches.flatMap(match => [
+                match.userid1.toString(),
+                match.userid2.toString()
+            ])
+        );
+
+        profiles = profiles.filter(profile =>
+            !matchedUserIds.has(profile.account.toString())
+        );
+
+        return profiles;
     }
 }
 

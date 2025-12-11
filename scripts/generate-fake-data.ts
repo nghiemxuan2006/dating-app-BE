@@ -61,6 +61,26 @@ const generatePhotos = (): string[] => {
     return photos;
 };
 
+const generateDescription = (username: string, interests: string[], locationString: string): string => {
+    const introTemplates = [
+        `${username} is always up for new adventures around ${locationString.split(',').slice(-2).join(', ').trim()}`,
+        `${username} loves exploring ${locationString.split(',')[0].trim()} and meeting new people along the way`,
+        `${username} is happiest when sharing good conversations somewhere in ${locationString.split(',').slice(-1)[0]?.trim() || 'their city'}`
+    ];
+
+    const interestSummary = interests.slice(0, 3).join(', ');
+    const vibeTemplates = [
+        `Currently obsessed with ${interestSummary}. Always open to discovering more.`,
+        `You can usually find ${username} immersed in ${interestSummary}.`,
+        `${username} balances a love for ${interestSummary} with plenty of spontaneous plans.`
+    ];
+
+    const intro = introTemplates[Math.floor(Math.random() * introTemplates.length)];
+    const vibe = vibeTemplates[Math.floor(Math.random() * vibeTemplates.length)];
+
+    return `${intro}. ${vibe}`;
+};
+
 const generateAvatarUrl = (): string => {
     // Generate a random avatar URL using different avatar services
     const avatarServices = [
@@ -375,6 +395,8 @@ async function generateFakeData(numUsers: number = 50) {
             const birthdate = generateBirthdate();
             const gender = generateGender();
             const locationData = generateLocation();
+            const interests = generateInterests();
+            const description = generateDescription(username, interests, locationData.location_string);
 
             // Create account
             const account = new Account({
@@ -392,12 +414,13 @@ async function generateFakeData(numUsers: number = 50) {
                 name: username, // Capitalize words
                 gender_preference: generateGender(),
                 birthdate,
-                interests: generateInterests(),
+                interests,
                 photos: generatePhotos(),
                 avatarUrl: generateAvatarUrl(),
                 age_range: generateAgeRange(birthdate),
                 location: locationData.location,
-                location_string: locationData.location_string
+                location_string: locationData.location_string,
+                description
             });
 
             userInfos.push(userInfo);

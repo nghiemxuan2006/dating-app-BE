@@ -211,5 +211,6 @@ router.post('/logout', verifyToken, authController.logout);
  *         description: Unauthorized
  */
 router.get('/profile', verifyToken, authController.getProfile);
+router.get('/potential-profiles', authController.getPotentialProfiles);
 
 export default router;

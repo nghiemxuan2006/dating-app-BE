@@ -15,6 +15,7 @@ import connectMongoDB from './config/mongodb';
 import routers from './routers'
 import http from 'http'
 import { initSocket } from './socket';
+import "./models"
 const writeLog = {
     write: (message: string) => {
         logger.info(message)

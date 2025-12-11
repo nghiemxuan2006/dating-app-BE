@@ -38,6 +38,7 @@ export interface IUserInfo extends Document {
         type: 'Point';
         coordinates: [number, number]; // [longitude, latitude]
     };
+    description: string;
     location_string?: string; // For easier querying like "Dao Nguyen, An Khanh, Ha Noi"
     createdAt: Date;
     updatedAt: Date;
@@ -68,6 +69,7 @@ const UserInfoSchema: Schema = new Schema<IUserInfo>(
                 default: [0, 0]
             }
         },
+        description: { type: String },
         location_string: { type: String } // e.g., "New York, NY"
     },
     { timestamps: true }

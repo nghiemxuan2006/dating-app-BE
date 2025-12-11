@@ -5,7 +5,7 @@ import { BAD_REQUEST_ERROR } from '../utils/error';
 import { extractToken } from '../utils/token';
 
 export interface AuthRequest extends Request {
-    user?: {
+    user: {
         id: string;
         username: string;
         email: string;
@@ -137,6 +137,21 @@ class AuthController {
                 success: true,
                 message: 'Profile retrieved successfully',
                 data: user
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+    async getPotentialProfiles(req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            const currentUserId = req.user.id;
+            const user = await authService.getUserProfileById(currentUserId);
+            const potentialProfiles = await authService.getPotentialProfiles(user);
+
+            res.status(httpStatus.OK).json({
+                success: true,
+                message: 'Potential profiles retrieved successfully',
+                data: potentialProfiles
             });
         } catch (error) {
             next(error);
