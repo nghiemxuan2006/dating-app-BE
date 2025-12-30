@@ -202,8 +202,11 @@ class AuthService {
         // Build base query
         const query: any = {
             account: { $ne: user._id }, // Exclude current user
-            gender: user.gender_preference, // Match gender preference
+            // gender: user.gender_preference, // Match gender preference
         };
+        if (user.gender_preference !== "other") {
+            query.gender = { $nin: [user.gender_preference] };
+        }
 
         // Filter by age range if preferences are set
         if (user.age_range) {
@@ -214,7 +217,7 @@ class AuthService {
         }
 
         // Filter by distance using geospatial query
-        const maxDistance = 5; // in kilometers
+        const maxDistance = 500; // in kilometers
         const distanceInMeters = maxDistance * 1000; // Convert km to meters
         query.location = {
             $near: {
@@ -227,34 +230,34 @@ class AuthService {
         };
 
         // Execute base query
-        let profiles = await UserInfo.find(query).select('-password');
+        let profiles = await UserInfo.find(query);
 
-        // Filter by interests (preferences must fit >= 2 options)
-        if (user.interests && user.interests.length > 0) {
-            profiles = profiles.filter(profile => {
-                if (!profile.interests) return false;
-                const commonInterests = profile.interests.filter(interest =>
-                    user.interests!.includes(interest)
-                );
-                return commonInterests.length >= 2;
-            });
-        }
+        // // Filter by interests (preferences must fit >= 2 options)
+        // if (user.interests && user.interests.length > 0) {
+        //     profiles = profiles.filter(profile => {
+        //         if (!profile.interests) return false;
+        //         const commonInterests = profile.interests.filter(interest =>
+        //             user.interests!.includes(interest)
+        //         );
+        //         return commonInterests.length >= 1;
+        //     });
+        // }
 
-        // Filter by description using semantic text matching
-        if (user.description) {
-            const keywords = user.description.toLowerCase().split(/\s+/);
-            profiles = profiles.filter(profile => {
-                if (!profile.name && !profile.location_string) return false;
+        // // Filter by description using semantic text matching
+        // if (user.description) {
+        //     const keywords = user.description.toLowerCase().split(/\s+/);
+        //     profiles = profiles.filter(profile => {
+        //         if (!profile.name && !profile.location_string) return false;
 
-                const searchableText = `${profile.name || ''} ${profile.location_string || ''}`.toLowerCase();
-                return keywords.some(keyword => searchableText.includes(keyword));
-            });
-        }
+        //         const searchableText = `${profile.name || ''} ${profile.location_string || ''}`.toLowerCase();
+        //         return keywords.some(keyword => searchableText.includes(keyword));
+        //     });
+        // }
 
-        // Filter by mutual gender preference
-        profiles = profiles.filter(profile => {
-            return profile.gender_preference === user.gender;
-        });
+        // // Filter by mutual gender preference
+        // profiles = profiles.filter(profile => {
+        //     return profile.gender_preference === user.gender;
+        // });
 
         // Filter by mutual age range (if set)
         if (profiles.length > 0) {
